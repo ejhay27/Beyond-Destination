@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { GameState, MemoryStorage, SAVE_PREFIX } from '../src/game-state.js';
 
 async function boot(page, qa = true) {
@@ -89,6 +90,12 @@ test('desktop keyboard/mouse, repeat suppression, zoom, pause rendering, focused
   await page.keyboard.press('w'); await page.keyboard.press('Space');
   await page.waitForTimeout(400);
   const stillPaused = await snapshot(page);
+  await page.evaluate(() => { window.__watchProbe = 'same-session'; });
+  await mkdir('.artifacts/watch-probe', { recursive: true });
+  await writeFile('.artifacts/watch-probe/generated-report.html', '<!doctype html><title>Generated QA report</title>');
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => window.__watchProbe)).toBe('same-session');
+  await expect(page.locator('#menuBackdrop')).toBeVisible();
   expect(stillPaused.position).toEqual(paused.position);
   expect(stillPaused.stats.renderedFrames).toBe(paused.stats.renderedFrames);
   await page.setViewportSize({ width: 840, height: 600 });

@@ -4,6 +4,8 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     allowedHosts: true,
+    // Generated native copies and browser traces must not reload an active life.
+    watch: { ignored: ['**/.artifacts/**', '**/android/**'] },
   },
   preview: {
     host: '0.0.0.0',
