@@ -1,38 +1,52 @@
-# Feature status
+# Feature status · cross-platform foundation 0.2.0
 
-Status key: **Tested** = exercised by an automated test or observed in a running build; **Implemented** = present in code but still needs the indicated integration/hardware test; **Partial** = useful subset only; **Planned** = not implemented.
+**Tested** here means automated unit/browser evidence, not Android hardware verification. **Implemented / native QA pending** means native code/configuration exists but an APK/device has not exercised it.
 
-## Playable foundation
+## Audit boundary
 
-| Feature | Status | Notes |
-|---|---|---|
-| 3D environment and local launch | Tested | Procedural low-poly Morrow Bay; production build succeeds, local Vite modules return HTTP 200, headless Chromium initializes WebGL 2. |
-| Walking/running and obstacle collision | Tested | Keyboard movement was exercised in the running browser; automated scene tests cover world bounds, walls, trees, water, and pier collision. |
-| First- and third-person cameras | Tested | Headless browser verified mode switch, drag orbit fallback, and mouse-wheel zoom; automated scene tests cover follow-camera collision distance. Confirm pointer-lock feel in a normal Windows browser. |
-| NPC proximity interaction and dialogue | Tested | Mira's dialogue opens in the running game and changes with errand state. |
-| Money/inventory-changing activity | Tested | Parcel route was completed in the running game: inventory changed, parcel cleared, balance rose from 85 to 120 credits. Unit tests enforce one-time reward and inventory consistency. |
-| World clock and day advancement | Tested | Clock rollover/rest have unit tests; the running bed interaction advanced the day to 06:00 and restored energy. |
-| Persistent progress | Tested | Three browser-local slots, version validation, staged write, and backup recovery; browser save/reload restored quest, currency, day, camera mode, and location. |
-| Character animation | Partial | Procedural idle/walk/run limb motion; no authored skeletal animation. |
-| Graphics settings | Partial | Pixel ratio capped at 1.2; shadows default off and can be toggled. FOV, sensitivity, and vertical inversion controls exist; full device-specific tuning remains. |
-| Windows native executable | Planned | Current deliverable is browser-playable on Windows, not a native `.exe`. Godot tooling was unavailable during this milestone. |
-| N100 / 8 GB performance baseline | Planned | Headless SwiftShader measured 18.7 FPS at 1280×720 after initial draw-call/shadow reductions. This does not substitute for a measurement on the target hardware. |
+The supplied baseline was `4ccb7d6`, and reported commit `c75a399` could not be found locally or through GitHub. The detailed evidence is in [the audit](AUDIT_2026-10-16.md). This milestone preserves what actually exists instead of claiming the missing career/housing/furniture milestone is present.
 
-## Later phases
+## Shared playable game
 
-| Feature | Status |
-|---|---|
-| Food, needs, and cooking | Planned |
-| Apartment interiors and housing transactions | Planned |
-| Construction and furniture placement | Planned |
-| Complete job application, interview, and café shift | Planned |
-| NPC schedules, relationships, and voiced dialogue | Planned |
-| Weather, seasons, and latitude-aware auroras | Planned |
-| World map and streamed regions | Planned |
-| Vehicle ownership and driving | Planned |
-| Phone, contacts, and navigation | Planned |
-| Instruments, band, venues, and arcade minigame | Planned |
-| Main mystery, complete ending, and post-game | Planned |
-| Accessibility, Windows packaging, and release QA | Planned |
+| Feature | Status | Evidence / limits |
+| --- | --- | --- |
+| Procedural Morrow Bay and WebGL 2 | Tested | Development and production Chromium builds render locally with no page/console errors or runtime external requests. |
+| Walking/running/jumping and collision | Tested | Keyboard browser pass, multi-pointer touch pass, analytic scene/collision tests. Physical feel still needs Windows/Android hardware. |
+| First-/third-person cameras, orbit and zoom | Tested | V, repeat suppression, mouse drag, wheel, touch drag, View and dedicated zoom buttons. Pointer lock is present with fallback; physical lock feel unmeasured. |
+| Mira Calder dialogue and one-time parcel errand | Tested | Ordinary keyboard playthrough without QA helpers, targeted touch workflow and unit reward/item consistency tests. |
+| Credits and carried quest items | Tested | One parcel, one 35-credit reward, actual inventory view, save/import validation. No shop/economic expansion implied. |
+| Rest, energy and day progression | Tested | Touch bed interaction advanced day/restored energy; unit rollover/rest tests. |
+| Local slots and schema migration | Tested | Original namespace preserved; schema 1 → 2; staged/backup recovery, write failure and readback tests. Browser save, tab close/reopen and reload verified. |
+| Safe import/export and slot targeting | Tested in browser; native QA pending | Real browser download/file import, validation/consent, active vs selected slot, future/unsupported data protection. Native sharing and persistence need APK tests. |
+| Character animation | Partial | Existing procedural idle/walk/run limb animation, no authored skeletal animation. |
 
-No population, planet-size, performance, or voice-coverage claims are made for unimplemented content.
+## Cross-platform presentation
+
+| Feature | Status | Evidence / limits |
+| --- | --- | --- |
+| One gameplay/action foundation | Tested | Device-independent input unit tests and all existing gameplay tests. No duplicate platform rules. |
+| Responsive shared HUD/dialogue/field kit | Tested | Phone/tablet/desktop sizing, rotation and safe-area simulation; readable scrolling panels, 44px button targets, focus trap and confirmation dialogs. Not a full accessibility audit. |
+| Windows controls and mouse-accessible menus | Tested in headless Chromium | Original keys preserved; inventory/journal toolbar added; fullscreen entered/exited through the production button. Not a native EXE. |
+| Android touch presentation | Tested in browser emulation | Independent joystick + right-look + third-finger jump, run toggle, camera/view/zoom, inventory, journal, dialogue, interaction and settings. Browser emulation is not Android WebView certification. |
+| Hybrid input | Tested at action/capability level | Keys still work with touch enabled; per-source holds/axes and one-shot/compatibility-click suppression. Windows touch hardware/gamepad not tested. |
+| Low/Balanced/High and resource optimizations | Tested | Geometry/material reuse, extra static instancing, render scale/shadows/draw distance. Software-renderer metrics only; no N100/Android FPS claim. |
+| Pause-aware rendering / web lifecycle | Tested in browser | No RAF frames while paused, neutral-input resume, simulated blur/focus flush save. Native interruptions still need physical tests. |
+| WebGL interruption recovery | Implemented | Context loss/restoration listeners and visible pause/recovery state; GPU-driver/Android recovery not device-tested. |
+
+## Native Android shell
+
+| Feature | Status | Evidence / limits |
+| --- | --- | --- |
+| Capacitor reuse of Vite dist | Configured and synced | Native Android project, pinned plugins, Gradle wrapper, no development server URL. |
+| Launcher/launch identity | Generated and structurally tested | Existing SVG-derived legacy/round/adaptive/monochrome icons and dark launch theme. Launcher masks not visually checked on a phone. |
+| Native pause/resume/Back | Implemented / native QA pending | App plugin bridge; pure Back-priority tests plus browser integration simulation. |
+| Native save adapter / JSON sharing | Implemented / native QA pending | Preferences mock restart/failure/order tests, Filesystem cache export, restricted FileProvider and Share bridge. No actual native restart/share-sheet test. |
+| APK | **Not built** | Preflight fails clearly: no JDK 21, SDK API 36 / build tools / platform-tools / command-line tools. Exact completion commands in [ANDROID.md](ANDROID.md). |
+| Android emulator / real devices | **Not tested** | No emulator, adb, phone or tablet attached. |
+| Intel N100 / 8 GB | **Not tested** | Only sandbox Chromium/SwiftShader software observations. |
+
+## Missing baseline features / later milestones
+
+The café/provisions building is scenery. Shop purchases/consumables, café applications/interviews/hiring/shifts/wages, Bayview leases/rent/renewal, furniture ownership/catalog/placement/editing/deletion and appearance personalization are **not implemented in the supplied checkpoint or this deliberately scoped milestone**. There are no fake visible buttons claiming otherwise. Neither a C shortcut nor touch construction controls are advertised as working.
+
+Recover/reconcile the reported gameplay checkpoint if available; otherwise add these shared state/rule/UI loops incrementally with save migrations and transaction regression tests. Then expand regions, transport, social systems, resources, cooking, performances, cyber-city and narrative only after real-device cross-platform validation. Automatic cloud synchronization, a native Windows executable, controller bindings, a huge streamed map and a finished RPG ending are not shipped here.

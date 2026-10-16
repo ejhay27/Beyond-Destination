@@ -1,22 +1,40 @@
 {
   "name": "beyond-destination-playable-slice",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22.17.0"
   },
   "description": "A playable 3D life-simulation RPG prototype set in Morrow Bay.",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test"
+    "test": "node --test test/*.test.js",
+    "test:browser": "playwright test",
+    "android:icons": "node scripts/android-icons.mjs",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:doctor": "node scripts/android-doctor.mjs",
+    "android:debug": "npm run android:sync && node scripts/android-build.mjs",
+    "profile:browser": "node scripts/profile-browser.mjs",
+    "test:production": "node scripts/production-smoke.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "8.4.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.4.3",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/share": "8.0.3",
     "three": "0.186.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.4.3",
+    "@playwright/test": "^1.64.1",
+    "@sparticuz/chromium": "^153.0.0",
+    "sharp": "^0.35.5",
     "vite": "8.3.4"
   }
 }

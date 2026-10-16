@@ -1,0 +1,22 @@
+{
+  "appId": "io.beyonddestination.game",
+  "appName": "Beyond Destination",
+  "webDir": "dist",
+  "backgroundColor": "#10202a",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#10202a",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false,
+    "minWebViewVersion": 110
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK",
+      "hidden": false,
+      "insetsHandling": "css"
+    }
+  }
+}

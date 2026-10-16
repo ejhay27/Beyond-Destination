@@ -1,0 +1,3 @@
+# Normalize batch files in Git and check them out with Windows-compatible endings.
+*.bat text eol=crlf
+android/gradlew text eol=lf

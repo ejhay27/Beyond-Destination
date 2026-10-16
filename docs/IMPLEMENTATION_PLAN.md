@@ -1,31 +1,38 @@
-# Beyond Destination — implementation plan
+# Beyond Destination · scoped cross-platform milestone
 
-## Repository checkpoint
+## Recovery and audit
 
-- Inspected the repository before changing it: the initial project contained only `README.md`; there were no game sources, assets, dependencies, or engine project to preserve.
-- The working tree was clean at the supplied baseline commit `312e4d4` on `arena/0bb89570-beyond-destination`. That commit is the recoverable pre-implementation checkpoint.
-- No Godot executable/editor is installed in the environment. A probe of the official GitHub release endpoint redirected the binary download to a release-asset host that is not reachable here. Godot remains the preferred future native-export target, but an un-runnable project would not satisfy the first playable milestone.
+This session started on `arena/114d80af-beyond-destination` at immutable commit `4ccb7d6a456fe599b33ea7e95f6abe29337eb099`. Local recovery tag: `checkpoint/pre-cross-platform-4ccb7d6`; audit-only checkpoint commit: `907ee9c`. Work stays on the session branch; no main-branch replacement or new starter project.
 
-## Chosen first-milestone implementation
+The earlier Godot/future-engine discussion in the original prototype report is historical context, not this milestone's implementation direction. The existing procedural Three.js/WebGL/Vite game is already compatible with a thin Capacitor host and a shared responsive DOM UI. Replacing it with another engine would discard functioning code without addressing the actual platform/input/save work.
 
-Build a real, single-player 3D game slice in Three.js, Vite, and plain JavaScript modules. It runs locally in a modern Windows browser and has no server-side services or run-time network dependencies. This is a deliberate, documented fallback to keep the milestone playable and testable in this environment; it is not represented as a native Windows executable. Keep gameplay state, world generation, input, presentation, and persistence separated so a later Godot port or native packaging effort does not have to undo a monolithic prototype.
+Reported construction milestone `c75a399` was not available in local or GitHub history. The verified source has the original Mira/parcel/rest/camera/save slice, not jobs, shop transactions, Bayview housing or furniture. See the immutable [baseline audit](AUDIT_2026-10-16.md).
 
-## Immediate playable slice: Morrow Bay
+## Steps implemented and checked
 
-1. A compact, hand-authored coastal neighborhood, dock, cabin, café, landmarks, and low-poly scenery.
-2. A controllable avatar with walk/run, collision, a third-person follow camera, mouse orbit and zoom, plus a first-person view toggle.
-3. One named NPC, Mira Calder, with contextual dialogue and a one-time parcel errand: accept, collect the parcel at the pier, return it, and receive 35 credits.
-4. A real rest interaction that advances the day, restores energy, and preserves the world clock.
-5. Three local save slots with versioned, validated JSON, a temporary write, and a recoverable previous-save copy. Save/load includes task and inventory, money, clock, player transform, camera preferences, and energy.
-6. A compact in-game HUD, objective, interaction prompt, dialogue, and settings/pause panel; no title-menu-only or dashboard substitute.
+1. **Audit before edits.** Inspect source/UI/world/input/storage/tests/docs, run 12 baseline tests/build, query current Git/GitHub history and tooling, tag the clean baseline.
+2. **Preserve the shared runtime.** Keep world/character/collision/state rules; move the runtime from the tiny boot entry into `game.js`, not a new game.
+3. **Centralize input.** Shared normalized axes, look/zoom, edge/held actions, focus gating, reset/disposal and capability detection. Keep keyboard/mouse; add independent multi-pointer touch adapters.
+4. **Responsive presentation.** One token/component system for HUD/toolbar/context button/dialogue/menus/settings/confirmations; inventory and local phone journal reflect actual state. Touch-first phone layout and desktop side panels, safe areas/rotation/scrolling/focus handling.
+5. **Save compatibility and safety.** Preserve original slot keys/schema-1 progress, migrate to 2, guard unsupported/future data, keep backup/staged/readback checks, distinguish active journey from target slot, require discard/overwrite consent, provide validated portable JSON.
+6. **Native and web lifecycle.** Pause and save, clear held input, return paused, prioritized Back and save-and-exit/discard consent; browser events and lazy native App plugin.
+7. **Conservative rendering.** Reuse geometry/materials, batch suitable static meshes, keep cutaway/moving objects independent, remove some per-frame allocations, stop background/menu RAF, add presentation-only quality/resolution/shadow controls and explicit resource disposal.
+8. **Android packaging configuration.** Pin Capacitor/plugins, generate Android host/Gradle wrapper, reuse existing logo for real launcher/launch resources, restrict shared files to cache exports, sync `dist`, add toolchain preflight/build verification script and an optional manual CI workflow.
+9. **Verification and documentation.** Unit/state/scene/input/storage/config tests, ordinary no-helper desktop errand, multi-touch browser workflows, production/no-QA/fullscreen smoke, software-renderer resource measurements, exact Android finish/QA instructions.
+10. **Push the reviewed work to the session branch.** Do not merge into `main` or publish a release APK without an actual verified build and device gate.
 
-## Validation plan
+The unit/build gates were rerun throughout; actual commands/results and the limits of each test method are in [TESTING.md](TESTING.md).
 
-- Run the production build and the project's automated state/persistence tests.
-- Start the game server and verify the game entry point, bundled Three.js code, and static assets return successfully.
-- Exercise the movement/camera/interaction/save loop in a headless Chromium build where possible, and record separately any controls that still need a hands-on desktop-browser check. The environment has no installed desktop browser; a temporary headless Chromium/SwiftShader package was used for the smoke pass.
-- Keep the visual scene lightweight: procedural meshes, no large texture packs, capped device pixel ratio, and configurable shadows. Establish measured performance only when a real browser/device can be profiled; do not claim an N100 benchmark without one.
+## Blocked release gate, not a completed native release
 
-## Next milestone after the prototype
+The sandbox has no JDK 21, Android SDK/platform/build tools, adb or emulator, and cannot reach the required SDK/Maven/Gradle distribution hosts. The web build and Capacitor sync succeed; the native preflight correctly stops. **No APK, Android emulator run, physical phone/tablet run or N100 benchmark is claimed.** [ANDROID.md](ANDROID.md) supplies reproducible setup/build/signature/install steps.
 
-Add an apartment interior, item/shop transactions, and one complete café shift/interview loop. Before growing the world, profile the current slice on the stated N100 / 8 GB target and decide whether to continue the browser runtime or provision a Godot editor/export toolchain for the Windows-native release path.
+## Next milestone in order
+
+1. Build/signature-check the debug APK on a configured computer or the optional manual runner; complete emulator **and physical** phone/tablet lifecycle/input/save-transfer QA.
+2. Profile the shared slice on Intel N100/8 GB and modest Android hardware (frame times, memory, draw calls, background cost and thermals). Tune only measured presentation costs, not gameplay rules.
+3. Obtain/reconcile the missing `c75a399` or another real source checkpoint if it exists. Do not accept unfamiliar save fields merely to silently strip them. Reuse working career/shop/housing/furniture rules if supplied; otherwise implement these as small shared, tested rule/state/UI additions with migrations.
+4. Add touch construction presentation **with** the actual construction/catalog/ownership/placement rules, not disconnected placeholder controls.
+5. Expand coastal regions, mountains, parks, cities/cyber-city, transport, resources/cooking, music/social venues and the larger narrative gradually after the foundation/device gate. These are a vision, not completed features.
+
+No automatic cloud synchronization, separate Android gameplay implementation, native Windows EXE or massive-map rewrite is part of this milestone.

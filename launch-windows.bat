@@ -4,7 +4,7 @@ cd /d "%~dp0"
 where node >nul 2>nul
 if errorlevel 1 (
   echo Node.js is required to start the local game runtime.
-  echo Install Node.js 20.19+ or 22.12+, then run npm install in this folder.
+  echo Install Node.js 22.17+, then run npm install in this folder.
   pause
   exit /b 1
 )
