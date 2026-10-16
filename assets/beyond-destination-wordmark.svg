@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 104" fill="none">
+  <g transform="translate(4 4) scale(.96)">
+    <path d="M17 79V46C17 28.88 30.88 15 48 15s31 13.88 31 31v33" stroke="#E8E4D8" stroke-width="5" stroke-linecap="square"/>
+    <path d="M31 79V49c0-9.39 7.61-17 17-17s17 7.61 17 17v30" stroke="#8DB6B4" stroke-width="4" stroke-linecap="square"/>
+    <path d="M15 79h66" stroke="#E8E4D8" stroke-width="5" stroke-linecap="square"/>
+    <path d="M48 78V58m0 0-7 8m7-8 7 8" stroke="#DAB77A" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"/>
+  </g>
+  <text x="110" y="50" fill="#F0EDE4" font-family="Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="5">BEYOND</text>
+  <text x="112" y="78" fill="#AEBDB7" font-family="Arial, sans-serif" font-size="15" font-weight="500" letter-spacing="7">DESTINATION</text>
+</svg>
