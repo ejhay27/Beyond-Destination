@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Derived from assets/beyond-destination-mark.svg by npm run android:icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+  <group android:translateX="13.2" android:translateY="13.2" android:scaleX="0.85" android:scaleY="0.85">
+    <path android:pathData="M17 79V46C17 28.88 30.88 15 48 15s31 13.88 31 31v33" android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="square" android:strokeLineJoin="miter" />
+    <path android:pathData="M31 79V49c0-9.39 7.61-17 17-17s17 7.61 17 17v30" android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="square" android:strokeLineJoin="miter" />
+    <path android:pathData="M15 79h66" android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="square" android:strokeLineJoin="miter" />
+    <path android:pathData="M48 78V58m0 0-7 8m7-8 7 8" android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF" android:strokeWidth="3" android:strokeLineCap="square" android:strokeLineJoin="miter" />
+  </group>
+</vector>

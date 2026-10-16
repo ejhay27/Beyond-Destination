@@ -59,8 +59,11 @@ export function createMorrowBay(scene) {
   const lampMaterials = [];
   let roofLifted = false;
   const materials = new Map();
+  const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const planeGeometry = new THREE.PlaneGeometry(1, 1);
+  const cylinderGeometries = new Map();
   const getMaterial = (color, roughness = 0.9, options = {}) => {
-    const key = `${color}:${roughness}:${options.emissive ?? ''}`;
+    const key = JSON.stringify([color, roughness, options]);
     if (!materials.has(key)) materials.set(key, makeMaterial(color, roughness, options));
     return materials.get(key);
   };
@@ -78,10 +81,11 @@ export function createMorrowBay(scene) {
     emissiveIntensity = 0,
   } = {}) {
     const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(size[0], size[1], size[2]),
+      boxGeometry,
       getMaterial(color, roughness, { emissive, emissiveIntensity }),
     );
     mesh.position.set(position[0], position[1], position[2]);
+    mesh.scale.set(size[0], size[1], size[2]);
     if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
     mesh.castShadow = castShadow;
     mesh.receiveShadow = receiveShadow;
@@ -110,8 +114,10 @@ export function createMorrowBay(scene) {
     roughness = 0.9,
     parent = scene,
   } = {}) {
+    const geometryKey = `${radiusTop}:${radiusBottom}:${height}:${segments}`;
+    if (!cylinderGeometries.has(geometryKey)) cylinderGeometries.set(geometryKey, new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments));
     const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments),
+      cylinderGeometries.get(geometryKey),
       getMaterial(color, roughness),
     );
     mesh.position.set(position[0], position[1], position[2]);
@@ -133,7 +139,8 @@ export function createMorrowBay(scene) {
   }
 
   function addGroundPlane(width, depth, position, material, { rotation = -Math.PI / 2 } = {}) {
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), material);
+    const mesh = new THREE.Mesh(planeGeometry, material);
+    mesh.scale.set(width, depth, 1);
     mesh.rotation.x = rotation;
     mesh.position.set(position[0], position[1], position[2]);
     mesh.receiveShadow = true;
@@ -144,7 +151,7 @@ export function createMorrowBay(scene) {
   function addInstancedBoxes(size, positions, color, { castShadow = true, receiveShadow = true } = {}) {
     if (positions.length === 0) return null;
     const instances = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(size[0], size[1], size[2]),
+      boxGeometry,
       getMaterial(color),
       positions.length,
     );
@@ -152,7 +159,7 @@ export function createMorrowBay(scene) {
     positions.forEach(([x, y, z, rotationY = 0], index) => {
       transform.position.set(x, y, z);
       transform.rotation.set(0, rotationY, 0);
-      transform.scale.set(1, 1, 1);
+      transform.scale.set(size[0], size[1], size[2]);
       transform.updateMatrix();
       instances.setMatrixAt(index, transform.matrix);
     });
@@ -492,6 +499,30 @@ export function createMorrowBay(scene) {
     scene.add(hill);
   }
 
+  const boxBatches = new Map();
+  for (const mesh of scene.children) {
+    if (!mesh.isMesh || mesh.isInstancedMesh || mesh.geometry !== boxGeometry || roofParts.includes(mesh)) continue;
+    const key = `${mesh.material.uuid}:${mesh.castShadow}:${mesh.receiveShadow}`;
+    if (!boxBatches.has(key)) boxBatches.set(key, []);
+    boxBatches.get(key).push(mesh);
+  }
+  for (const meshes of boxBatches.values()) {
+    if (meshes.length < 3) continue;
+    const first = meshes[0];
+    const batch = new THREE.InstancedMesh(boxGeometry, first.material, meshes.length);
+    batch.castShadow = first.castShadow; batch.receiveShadow = first.receiveShadow;
+    let occludesCamera = false;
+    meshes.forEach((mesh, index) => {
+      mesh.updateMatrix(); batch.setMatrixAt(index, mesh.matrix); scene.remove(mesh);
+      const occluderIndex = cameraOccluders.indexOf(mesh);
+      if (occluderIndex !== -1) { cameraOccluders.splice(occluderIndex, 1); occludesCamera = true; }
+    });
+    batch.instanceMatrix.needsUpdate = true;
+    batch.computeBoundingSphere();
+    scene.add(batch);
+    if (occludesCamera) cameraOccluders.push(batch);
+  }
+
   const interactables = {
     npc: { position: new THREE.Vector3(2.55, 0, -1.35), radius: 2.45 },
     parcel: { position: new THREE.Vector3(0, 0, -20.7), radius: 1.65 },
@@ -546,12 +577,12 @@ export function createMorrowBay(scene) {
       let entry = -Infinity;
       let exit = Infinity;
       if (collider.type === 'box') {
-        const axes = [
-          [origin.x, direction.x, collider.minX - padding, collider.maxX + padding],
-          [origin.z, direction.z, collider.minZ - padding, collider.maxZ + padding],
-        ];
         let blocked = false;
-        for (const [coordinate, velocity, min, max] of axes) {
+        for (let axis = 0; axis < 2; axis += 1) {
+          const coordinate = axis === 0 ? origin.x : origin.z;
+          const velocity = axis === 0 ? direction.x : direction.z;
+          const min = (axis === 0 ? collider.minX : collider.minZ) - padding;
+          const max = (axis === 0 ? collider.maxX : collider.maxZ) + padding;
           if (Math.abs(velocity) < 1e-7) {
             if (coordinate < min || coordinate > max) blocked = true;
             continue;

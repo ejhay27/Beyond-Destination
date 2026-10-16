@@ -1,0 +1,324 @@
+import { test, expect } from '@playwright/test';
+import { GameState, MemoryStorage, SAVE_PREFIX } from '../src/game-state.js';
+
+async function boot(page, qa = true) {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.goto(qa ? '/?qa=1' : '/');
+  if (qa) await page.waitForFunction(() => Boolean(window.__BD_QA__));
+  await expect(page.locator('#loadingScreen')).toHaveCount(0);
+  await expect(page.locator('#errorScreen')).toBeHidden();
+  return errors;
+}
+const snapshot = (page) => page.evaluate(() => window.__BD_QA__.snapshot());
+async function nextFrames(page, count = 3) {
+  const start = (await snapshot(page)).stats.renderedFrames;
+  await page.waitForFunction(({ start, count }) => window.__BD_QA__.snapshot().stats.renderedFrames >= start + count, { start, count });
+}
+async function hold(page, key, milliseconds) {
+  await page.keyboard.down(key); await page.waitForTimeout(milliseconds); await page.keyboard.up(key);
+}
+
+// No QA URL, teleports, state mutators, or developer helpers in this playthrough.
+// Navigation uses ordinary keys, the real proximity prompt, dialogue and save HUD.
+test('ordinary desktop playthrough: accept, walk the pier, deliver, save and reopen', async ({ page, context }) => {
+  const errors = await boot(page, false);
+  expect(await page.evaluate(() => '__BD_QA__' in window)).toBe(false);
+  await hold(page, 'd', 200);
+  await page.keyboard.down('w');
+  await expect(page.locator('#interactionPrompt')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#interactionPrompt')).toContainText('Talk to Mira');
+  await page.keyboard.up('w');
+  await page.keyboard.press('e');
+  await expect(page.locator('#dialoguePanel')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#objectiveTitle')).toHaveText('A sealed parcel');
+  await page.keyboard.down('w');
+  await expect(page.locator('#interactionPrompt')).toContainText('Collect sealed parcel', { timeout: 35_000 });
+  await page.keyboard.up('w');
+  await page.keyboard.press('e');
+  await expect(page.locator('#objectiveTitle')).toHaveText('Bring it back');
+  await page.keyboard.down('s');
+  await expect(page.locator('#interactionPrompt')).toContainText('Talk to Mira', { timeout: 35_000 });
+  await page.keyboard.up('s');
+  await page.keyboard.press('e');
+  await page.locator('#dialogueAction').click();
+  await expect(page.locator('#creditsLabel')).toHaveText('120');
+  await expect(page.locator('#objectiveTitle')).toHaveText('A little more light');
+  await page.keyboard.press('F5');
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null')?.state.taskStage, `${SAVE_PREFIX}1`)).toBe('done');
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), `${SAVE_PREFIX}1`);
+  await page.close();
+  const reopened = await context.newPage();
+  await boot(reopened, false);
+  await expect(reopened.locator('#creditsLabel')).toHaveText('120');
+  await expect(reopened.locator('#objectiveTitle')).toHaveText('A little more light');
+  expect(saved.state.inventory.sealedParcel).toBe(0);
+  expect(errors).toEqual([]);
+  await reopened.screenshot({ path: '.artifacts/ordinary-desktop-playthrough.png' });
+});
+
+test('desktop keyboard/mouse, repeat suppression, zoom, pause rendering, focused UI and resizing', async ({ page }) => {
+  const errors = await boot(page);
+  await expect(page.locator('#touchControls')).toBeHidden();
+  const initial = await snapshot(page);
+  await hold(page, 'w', 400);
+  expect((await snapshot(page)).position[2]).toBeLessThan(initial.position[2]);
+  await page.keyboard.down('Shift'); await hold(page, 'w', 400); await page.keyboard.up('Shift');
+  expect((await snapshot(page)).energy).toBeLessThan(100);
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await snapshot(page)).grounded).toBe(false);
+  await expect.poll(async () => (await snapshot(page)).grounded).toBe(true);
+  await page.keyboard.down('v'); await page.keyboard.down('v'); await page.keyboard.up('v');
+  await expect.poll(async () => (await snapshot(page)).camera.mode).toBe('first');
+  await page.keyboard.press('v');
+  await expect.poll(async () => (await snapshot(page)).camera.mode).toBe('third');
+  const yaw = (await snapshot(page)).camera.yaw;
+  await page.mouse.move(700, 350); await page.mouse.down(); await page.mouse.move(770, 365, { steps: 5 }); await page.mouse.up();
+  await expect.poll(async () => (await snapshot(page)).camera.yaw).not.toBe(yaw);
+  await page.evaluate(() => document.exitPointerLock?.());
+  const distance = (await snapshot(page)).camera.distance;
+  await page.mouse.wheel(0, 100);
+  await expect.poll(async () => (await snapshot(page)).camera.distance).toBeGreaterThan(distance);
+  await page.locator('#fieldButton').click();
+  await expect(page.locator('#menuBackdrop')).toBeVisible();
+  await page.waitForTimeout(250);
+  const paused = await snapshot(page);
+  await page.locator('#sensitivitySlider').focus();
+  await page.keyboard.press('w'); await page.keyboard.press('Space');
+  await page.waitForTimeout(400);
+  const stillPaused = await snapshot(page);
+  expect(stillPaused.position).toEqual(paused.position);
+  expect(stillPaused.stats.renderedFrames).toBe(paused.stats.renderedFrames);
+  await page.setViewportSize({ width: 840, height: 600 });
+  const panel = await page.locator('#fieldPanel').boundingBox();
+  expect(panel.x + panel.width).toBeLessThanOrEqual(840);
+  expect(panel.height).toBeLessThanOrEqual(600);
+  await page.locator('#qualitySelect').selectOption('low');
+  expect((await snapshot(page)).graphics.quality).toBe('low');
+  await page.locator('#resumeButton').click();
+  await expect(page.locator('#menuBackdrop')).toBeHidden();
+  const afterResume = await snapshot(page);
+  await nextFrames(page);
+  expect((await snapshot(page)).position).toEqual(afterResume.position);
+  await page.keyboard.press('i');
+  await expect(page.locator('#fieldTitle')).toHaveText('Travel light.');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('p');
+  await expect(page.locator('#journalTitle')).toHaveText('The Lantern Post');
+  await page.keyboard.press('Escape');
+  expect(errors).toEqual([]);
+});
+
+test('slot targeting, unsaved-load consent and newer-save protection in the browser', async ({ page }) => {
+  const errors = await boot(page);
+  await page.keyboard.press('F5');
+  await page.locator('#fieldButton').click();
+  await page.locator('#slotSelect').selectOption('2');
+  await page.locator('#saveButton').click();
+  await expect.poll(async () => (await snapshot(page)).activeSlot).toBe(2);
+  await page.locator('#slotSelect').selectOption('1');
+  await page.locator('#resumeButton').click();
+  await page.evaluate(() => window.__BD_QA__.placePlayer(1, 0));
+  await page.keyboard.press('e');
+  await expect(page.locator('#dialoguePanel')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#objectiveTitle')).toHaveText('A sealed parcel');
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key)).state.taskStage, `${SAVE_PREFIX}2`)).toBe('fetch');
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).state.taskStage, `${SAVE_PREFIX}1`)).toBe('available');
+  await hold(page, 'a', 250);
+  await page.keyboard.press('F9');
+  await expect(page.locator('#confirmBackdrop')).toBeVisible();
+  await page.locator('#confirmCancel').click();
+  expect((await snapshot(page)).taskStage).toBe('fetch');
+  await page.keyboard.press('F9');
+  await page.locator('#confirmAccept').click();
+  await expect(page.locator('#objectiveTitle')).toHaveText('The Lantern Post');
+  const future = { ...new GameState(new MemoryStorage()).createSaveDocument(), schemaVersion: 99 };
+  await page.evaluate(([key, save]) => localStorage.setItem(key, JSON.stringify(save)), [`${SAVE_PREFIX}1`, future]);
+  await page.reload();
+  await page.waitForFunction(() => Boolean(window.__BD_QA__));
+  await page.keyboard.press('F5');
+  await expect(page.locator('#confirmBackdrop')).toBeVisible();
+  await page.locator('#confirmCancel').click();
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).schemaVersion, `${SAVE_PREFIX}1`)).toBe(99);
+  expect(errors).toEqual([]);
+});
+
+test.describe('touch browser emulation (not an Android emulator)', () => {
+  test.use({ viewport: { width: 393, height: 851 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+
+  test('real multi-pointer joystick + camera + third-finger jump, run, UI isolation and back priority', async ({ page }) => {
+    const errors = await boot(page);
+    await expect(page.locator('#touchControls')).toBeVisible();
+    expect((await snapshot(page)).graphics.quality).toBe('low');
+    const session = await page.context().newCDPSession(page);
+    await session.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    const joy = await page.locator('#moveJoystick').boundingBox();
+    const center = { x: joy.x + joy.width / 2, y: joy.y + joy.height / 2, id: 1 };
+    const walking = { ...center, y: center.y - 36 };
+    const camera = { x: 270, y: 380, id: 2 };
+    const before = await snapshot(page);
+    const touch = (type, points) => session.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+    await touch('touchStart', [center]); await touch('touchMove', [walking]);
+    await touch('touchStart', [walking, camera]);
+    await touch('touchMove', [walking, { ...camera, x: 322, y: 370 }]);
+    await expect.poll(async () => (await snapshot(page)).position[2]).toBeLessThan(before.position[2] - 0.2);
+    await expect.poll(async () => (await snapshot(page)).camera.yaw).not.toBe(before.camera.yaw);
+    const jump = await page.locator('[data-input-action="jump"]').boundingBox();
+    const third = { x: jump.x + jump.width / 2, y: jump.y + jump.height / 2, id: 3 };
+    await touch('touchStart', [walking, { ...camera, x: 322, y: 370 }, third]);
+    await expect.poll(async () => (await snapshot(page)).grounded).toBe(false);
+    await touch('touchEnd', []);
+    await expect.poll(async () => (await snapshot(page)).grounded).toBe(true);
+    await page.locator('[data-input-action="run"]').tap();
+    await expect(page.locator('[data-input-action="run"]')).toHaveAttribute('aria-pressed', 'true');
+    const energy = (await snapshot(page)).energy;
+    await touch('touchStart', [center]); await touch('touchMove', [walking]);
+    await expect.poll(async () => (await snapshot(page)).energy).toBeLessThan(energy - 1);
+    await page.locator('#fieldButton').tap(); // Also cancels a still-held movement thumb.
+    await touch('touchEnd', []);
+    await expect(page.locator('[data-input-action="run"]')).toHaveAttribute('aria-pressed', 'false');
+    await page.locator('#resumeButton').tap();
+    const stopped = await snapshot(page);
+    await nextFrames(page);
+    expect((await snapshot(page)).position).toEqual(stopped.position);
+    await page.locator('[data-input-action="inventory"]').tap();
+    await expect(page.locator('#fieldTitle')).toHaveText('Travel light.');
+    await page.evaluate(() => void window.__BD_QA__.back());
+    await expect(page.locator('#menuBackdrop')).toBeHidden();
+    await page.evaluate(() => void window.__BD_QA__.back());
+    await expect(page.locator('#menuBackdrop')).toBeVisible();
+    await page.evaluate(() => void window.__BD_QA__.back());
+    await expect(page.locator('#confirmBackdrop')).toBeVisible();
+    await page.evaluate(() => void window.__BD_QA__.back());
+    await expect(page.locator('#confirmBackdrop')).toBeHidden();
+    await page.locator('#resumeButton').tap();
+    const mode = (await snapshot(page)).camera.mode;
+    await page.locator('[data-input-action="switch-camera"]').tap();
+    await expect.poll(async () => (await snapshot(page)).camera.mode).not.toBe(mode);
+    expect(errors).toEqual([]);
+    await page.screenshot({ path: '.artifacts/touch-portrait.png' });
+  });
+
+  test('touch quest, real inventory, resting, save slots and portable import/export', async ({ page }) => {
+    const errors = await boot(page);
+    const place = (x, z) => page.evaluate(([x, z]) => window.__BD_QA__.placePlayer(x, z), [x, z]);
+    await place(1, 0);
+    await expect(page.locator('#interactionPrompt')).toContainText('Talk to Mira');
+    await page.locator('#interactionPrompt').tap();
+    await expect(page.locator('#dialoguePanel')).toBeVisible();
+    await page.evaluate(() => void window.__BD_QA__.back());
+    await expect(page.locator('#dialoguePanel')).toBeHidden();
+    expect((await snapshot(page)).taskStage).toBe('available');
+    await page.locator('#interactionPrompt').tap();
+    await page.locator('#dialogueAction').tap();
+    await expect(page.locator('#objectiveTitle')).toHaveText('A sealed parcel');
+    await place(0, -20.2);
+    await expect(page.locator('#interactionPrompt')).toContainText('Collect sealed parcel');
+    await page.locator('#interactionPrompt').tap();
+    await page.locator('[data-input-action="inventory"]').tap();
+    await expect(page.locator('#inventoryItems')).toContainText('Sealed parcel');
+    await page.locator('#resumeButton').tap();
+    await place(1, 0);
+    await expect(page.locator('#interactionPrompt')).toContainText('Talk to Mira');
+    await page.locator('#interactionPrompt').tap(); await page.locator('#dialogueAction').tap();
+    await expect(page.locator('#creditsLabel')).toHaveText('120');
+    await page.locator('#interactionPrompt').tap(); await page.locator('#dialogueAction').tap();
+    expect((await snapshot(page)).credits).toBe(120);
+    await place(-9.65, 4.4);
+    await expect(page.locator('#interactionPrompt')).toContainText('Rest until morning');
+    await page.locator('#interactionPrompt').tap();
+    await expect.poll(async () => (await snapshot(page)).day).toBe(2);
+    await page.locator('#fieldButton').tap();
+    await page.locator('#slotSelect').selectOption('2');
+    await page.locator('#saveButton').tap();
+    await expect.poll(async () => (await snapshot(page)).activeSlot).toBe(2);
+    const download = page.waitForEvent('download');
+    await page.locator('#exportButton').tap();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/\.beyond\.json$/);
+    const stream = await file.createReadStream(); let content = '';
+    for await (const data of stream) content += data.toString();
+    expect(GameState.validateDocument(content).state.credits).toBe(120);
+    await page.reload(); await page.waitForFunction(() => Boolean(window.__BD_QA__));
+    expect((await snapshot(page)).credits).toBe(120);
+    expect((await snapshot(page)).day).toBe(2);
+    expect((await snapshot(page)).activeSlot).toBe(2);
+    await page.locator('#fieldButton').tap();
+    await page.locator('#importFile').setInputFiles({ name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{bad') });
+    await expect(page.locator('#toast')).toContainText('Not a compatible save');
+    expect((await snapshot(page)).credits).toBe(120);
+    const old = new GameState(new MemoryStorage()).createSaveDocument();
+    old.schemaVersion = 1; delete old.state.settings; old.state.graphics = { shadows: false }; old.state.credits = 222;
+    const imported = { name: 'old-pc-life.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(old)) };
+    await page.locator('#importFile').setInputFiles(imported);
+    await expect(page.locator('#confirmBackdrop')).toBeVisible();
+    await page.locator('#confirmCancel').tap();
+    expect((await snapshot(page)).credits).toBe(120);
+    await page.locator('#importFile').setInputFiles(imported);
+    await page.locator('#confirmAccept').tap();
+    await expect(page.locator('#creditsLabel')).toHaveText('222');
+    expect((await snapshot(page)).taskStage).toBe('available');
+    expect(errors).toEqual([]);
+  });
+
+  test('rotation, phones/tablets, safe areas and scrollable settings stay within viewport', async ({ page }) => {
+    const errors = await boot(page);
+    for (const [width, height] of [[320, 568], [360, 640], [393, 851], [768, 1024], [1024, 768], [844, 390], [568, 320]]) {
+      await page.setViewportSize({ width, height });
+      for (const selector of ['#fieldButton', '.objective-card', '#moveJoystick', '[data-input-action="jump"]', '[data-input-action="run"]', '.world-toolbar', '.touch-zoom']) {
+        const box = await page.locator(selector).boundingBox();
+        expect(box, `${selector} is visible at ${width}×${height}`).not.toBeNull();
+        expect(box.x, selector).toBeGreaterThanOrEqual(-1);
+        expect(box.y, selector).toBeGreaterThanOrEqual(-1);
+        expect(box.x + box.width, selector).toBeLessThanOrEqual(width + 1);
+        expect(box.y + box.height, selector).toBeLessThanOrEqual(height + 1);
+      }
+      const overlap = await page.evaluate(() => {
+        const rects = ['.objective-card', '#moveJoystick', '.world-toolbar', '.touch-actions', '.touch-zoom'].map((s) => document.querySelector(s).getBoundingClientRect());
+        return rects.some((a, i) => rects.slice(i + 1).some((b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1));
+      });
+      expect(overlap, `No HUD overlaps at ${width}×${height}`).toBe(false);
+      await page.locator('#fieldButton').tap();
+      await expect(page.locator('#fieldPanel')).toBeVisible();
+      await page.locator('#resumeButton').scrollIntoViewIfNeeded();
+      await page.locator('#resumeButton').tap();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    }
+    await page.setViewportSize({ width: 393, height: 851 });
+    await page.evaluate(() => {
+      for (const [side, value] of [['top', '24px'], ['bottom', '22px'], ['left', '18px'], ['right', '18px']]) document.documentElement.style.setProperty(`--safe-area-inset-${side}`, value);
+    });
+    const field = await page.locator('#fieldButton').boundingBox();
+    expect(field.y).toBeGreaterThanOrEqual(24);
+    const joy = await page.locator('#moveJoystick').boundingBox();
+    expect(joy.y + joy.height).toBeLessThan(851 - 22);
+    await page.screenshot({ path: '.artifacts/touch-safe-area.png' });
+    expect(errors).toEqual([]);
+  });
+
+  test('browser lifecycle events flush saves, stop rendering and resume without stuck controls', async ({ page }) => {
+    const errors = await boot(page);
+    await page.keyboard.down('w');
+    await nextFrames(page);
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await expect(page.locator('#menuBackdrop')).toBeVisible();
+    const paused = await snapshot(page);
+    await page.waitForTimeout(300);
+    expect((await snapshot(page)).stats.renderedFrames).toBe(paused.stats.renderedFrames);
+    expect((await snapshot(page)).suspended).toBe(true);
+    const raw = await page.evaluate((key) => localStorage.getItem(key), `${SAVE_PREFIX}1`);
+    expect(GameState.validateDocument(raw)).not.toBeNull();
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.keyboard.up('w');
+    await page.locator('#resumeButton').tap();
+    const position = (await snapshot(page)).position;
+    await nextFrames(page);
+    expect((await snapshot(page)).position).toEqual(position);
+    await page.reload(); await page.waitForFunction(() => Boolean(window.__BD_QA__));
+    expect((await snapshot(page)).position[2]).toBeCloseTo(position[2], 2);
+    expect(errors).toEqual([]);
+  });
+});

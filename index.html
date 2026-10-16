@@ -2,36 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#10202a" />
-    <meta name="description" content="Beyond Destination — a playable open-world life simulation RPG slice." />
+    <meta name="description" content="Beyond Destination — a local-first coastal life RPG for keyboard, mouse and touch." />
     <link rel="icon" type="image/svg+xml" href="/assets/beyond-destination-mark.svg" />
     <title>Beyond Destination — Morrow Bay</title>
   </head>
   <body>
-    <canvas id="gameCanvas" aria-label="Morrow Bay, the playable world of Beyond Destination"></canvas>
-
-    <main id="gameHud" class="game-hud" aria-live="polite">
+    <canvas id="gameCanvas" tabindex="0" aria-label="Morrow Bay, the playable world of Beyond Destination"></canvas>
+    <main id="gameHud" class="game-hud">
       <header class="top-bar">
         <div class="brand-lockup" aria-label="Beyond Destination">
           <img src="/assets/beyond-destination-mark.svg" alt="" />
           <div class="wordmark"><strong>BEYOND</strong><span>DESTINATION</span></div>
         </div>
-        <div class="location-chip">
-          <span class="eyebrow">COASTAL DISTRICT</span>
-          <span class="location-name">Morrow Bay</span>
-        </div>
+        <div class="location-chip"><span class="eyebrow">COASTAL DISTRICT</span><span class="location-name">Morrow Bay</span></div>
         <div class="status-cluster">
-          <div class="day-clock">
-            <span id="dayLabel" class="eyebrow">DAY 01</span>
-            <strong id="clockLabel">08:00</strong>
-          </div>
-          <div class="money-chip" title="Available credits">
-            <span class="currency-mark">¢</span><strong id="creditsLabel">85</strong>
-          </div>
-          <button id="fieldButton" class="hud-button" type="button" aria-label="Open field settings">
-            <span class="field-icon" aria-hidden="true">☰</span><span>FIELD KIT</span>
-          </button>
+          <div class="day-clock"><span id="dayLabel" class="eyebrow">DAY 01</span><strong id="clockLabel">08:00</strong></div>
+          <div class="money-chip" aria-label="Available credits"><span class="currency-mark">¢</span><strong id="creditsLabel">85</strong></div>
+          <button id="fieldButton" class="hud-button" type="button" aria-label="Open pause and field settings" title="Field kit · Esc"><span class="field-icon" aria-hidden="true">☰</span><span>FIELD KIT</span></button>
         </div>
       </header>
 
@@ -40,63 +29,81 @@
         <h1 id="objectiveTitle">The Lantern Post</h1>
         <p id="objectiveText">Find Mira near the pier and ask about the post boat.</p>
         <div class="objective-rule"><span></span></div>
-        <div class="energy-row">
-          <span>ENERGY</span>
-          <div class="energy-track"><span id="energyFill"></span></div>
-          <strong id="energyLabel">100%</strong>
-        </div>
+        <div class="energy-row"><span>ENERGY</span><div class="energy-track"><span id="energyFill"></span></div><strong id="energyLabel">100%</strong></div>
       </section>
 
-      <div id="reticle" class="reticle" aria-hidden="true"><i></i></div>
-      <div id="captureHint" class="capture-hint"><span>CLICK WORLD TO LOOK AROUND</span><kbd>Esc</kbd></div>
-
-      <div id="interactionPrompt" class="interaction-prompt" hidden>
-        <kbd id="interactionKey">E</kbd><span id="interactionText">Talk to Mira</span><span class="prompt-arrow">↗</span>
+      <div id="worldControls">
+        <nav class="world-toolbar" aria-label="Journey controls">
+          <button class="hud-button" data-input-action="switch-camera" type="button" aria-label="Switch first-person or third-person camera" title="Switch camera · V"><span aria-hidden="true">◉</span><span>VIEW</span></button>
+          <button class="hud-button" data-input-action="inventory" type="button" aria-label="Open inventory" title="Inventory · I"><span aria-hidden="true">▣</span><span>BAG</span></button>
+          <button class="hud-button" data-input-action="phone" type="button" aria-label="Open phone journal" title="Phone journal · P"><span aria-hidden="true">▤</span><span>JOURNAL</span></button>
+        </nav>
+        <div id="reticle" class="reticle" aria-hidden="true"><i></i></div>
+        <div id="captureHint" class="capture-hint"><span>CLICK WORLD TO LOOK AROUND</span><kbd>Esc</kbd></div>
+        <button id="interactionPrompt" class="interaction-prompt" data-input-action="interact" type="button" hidden><kbd id="interactionKey">E</kbd><span id="interactionText">Talk to Mira</span><span class="prompt-arrow" aria-hidden="true">↗</span></button>
+        <div id="touchControls" class="touch-controls" aria-label="Touch game controls" hidden>
+          <div id="moveJoystick" class="move-joystick" role="group" aria-label="Movement joystick. Drag to walk; run button toggles running."><span class="joystick-cross" aria-hidden="true"></span><span class="joystick-thumb" aria-hidden="true"></span><span class="joystick-label">MOVE</span></div>
+          <span class="touch-look-hint" aria-hidden="true">DRAG RIGHT SIDE TO LOOK</span>
+          <div class="touch-actions">
+            <button class="touch-button run-button" data-input-action="run" type="button" aria-label="Toggle running" aria-pressed="false">RUN</button>
+            <button class="touch-button jump-button" data-input-action="jump" type="button" aria-label="Jump">JUMP <span aria-hidden="true">↑</span></button>
+          </div>
+          <div class="touch-zoom" aria-label="Third-person camera zoom"><button class="hud-button" data-zoom="-0.72" type="button" aria-label="Zoom camera in">+</button><button class="hud-button" data-zoom="0.72" type="button" aria-label="Zoom camera out">−</button></div>
+        </div>
       </div>
 
       <div class="bottom-hud">
-        <div class="ambient-location"><span class="location-pin">◇</span><span id="areaLabel">LANTERN QUARTER</span><span class="separator">/</span><span id="landmarkLabel">WATERFRONT</span></div>
-        <div class="control-strip">
-          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span>
-          <span><kbd>SHIFT</kbd> RUN</span>
-          <span><kbd>V</kbd> VIEW</span>
-          <span><kbd>E</kbd> INTERACT</span>
-          <span><kbd>SCROLL</kbd> ZOOM</span>
-        </div>
+        <div class="ambient-location"><span class="location-pin" aria-hidden="true">◇</span><span>LANTERN QUARTER</span><span class="separator">/</span><span>WATERFRONT</span></div>
+        <div class="control-strip"><span><kbd>WASD</kbd> MOVE</span><span><kbd>SHIFT</kbd> RUN</span><span><kbd>SPACE</kbd> JUMP</span><span><kbd>V</kbd> VIEW</span><span><kbd>E</kbd> INTERACT</span><span><kbd>SCROLL</kbd> ZOOM</span></div>
       </div>
 
-      <section id="dialoguePanel" class="dialogue-panel" hidden aria-labelledby="dialogueName">
-        <div class="dialogue-portrait"><span id="dialogueInitial">M</span><i></i></div>
+      <section id="dialoguePanel" class="dialogue-panel" role="dialog" aria-modal="true" hidden aria-labelledby="dialogueName" aria-describedby="dialogueText" tabindex="-1">
+        <div class="dialogue-portrait" aria-hidden="true"><span id="dialogueInitial">M</span><i></i></div>
         <div class="dialogue-copy">
           <div class="dialogue-heading"><div><h2 id="dialogueName">Mira Calder</h2><span id="dialogueRole">LANTERN POST KEEPER</span></div><button id="closeDialogue" class="close-button" type="button" aria-label="Close conversation">×</button></div>
           <p id="dialogueText"></p>
-          <div class="dialogue-actions"><span class="dialogue-hint"><kbd>Enter</kbd> <span>to respond</span></span><button id="dialogueAction" class="primary-button" type="button">Continue <span>↗</span></button></div>
+          <div class="dialogue-actions"><span class="dialogue-hint"><kbd>Enter</kbd> to respond</span><button id="dialogueAction" class="primary-button" type="button">Continue ↗</button></div>
         </div>
       </section>
 
       <div id="menuBackdrop" class="menu-backdrop" hidden>
-        <section class="field-panel" aria-labelledby="fieldTitle">
-          <div class="panel-topline"><span class="eyebrow">PERSONAL FIELD KIT</span><button id="closeField" class="close-button" type="button" aria-label="Close settings">×</button></div>
+        <section id="fieldPanel" class="field-panel" role="dialog" aria-modal="true" aria-labelledby="fieldTitle" tabindex="-1">
+          <div class="panel-topline"><span id="panelKicker" class="eyebrow">PERSONAL FIELD KIT</span><button id="closeField" class="close-button" type="button" aria-label="Close panel">×</button></div>
           <h2 id="fieldTitle">Take a breath.</h2>
-          <p class="panel-description">Make the view yours, or keep a local copy of this life.</p>
-          <div class="field-controls">
-            <label class="setting-row" for="slotSelect"><span><strong>Save slot</strong><small>Stored in this browser only</small></span><select id="slotSelect"><option value="1">01 · Morrow Bay</option><option value="2">02 · Empty journey</option><option value="3">03 · Empty journey</option></select></label>
-            <label class="setting-row range-row" for="sensitivitySlider"><span><strong>Look sensitivity</strong><small>Mouse camera movement</small></span><span class="range-control"><input id="sensitivitySlider" type="range" min="0.0006" max="0.006" step="0.0001" value="0.0024" /><output id="sensitivityValue">40%</output></span></label>
-            <label class="setting-row range-row" for="fovSlider"><span><strong>Field of view</strong><small>First-person camera</small></span><span class="range-control"><input id="fovSlider" type="range" min="45" max="85" step="1" value="58" /><output id="fovValue">58°</output></span></label>
-            <label class="setting-row switch-row" for="invertToggle"><span><strong>Invert vertical look</strong><small>Reverse mouse up / down</small></span><input id="invertToggle" type="checkbox" /></label>
-            <label class="setting-row switch-row" for="shadowToggle"><span><strong>Dynamic shadows</strong><small>Enable for richer lighting</small></span><input id="shadowToggle" type="checkbox" /></label>
+          <p id="panelDescription" class="panel-description">Make the view yours, or keep a local copy of this life.</p>
+          <div id="settingsPage" class="panel-page">
+            <div class="field-controls">
+              <label class="setting-row" for="slotSelect"><span><strong>Save slot</strong><small id="storageLabel">Stored on this device</small></span><select id="slotSelect"><option value="1">01 · Empty journey</option><option value="2">02 · Empty journey</option><option value="3">03 · Empty journey</option></select></label>
+              <p id="saveStatus" class="inline-note">Autosave stays with your active journey.</p>
+              <label class="setting-row" for="qualitySelect"><span><strong>Graphics</strong><small>Presentation only; same world rules</small></span><select id="qualitySelect"><option value="low">Low</option><option value="balanced">Balanced</option><option value="high">High</option></select></label>
+              <label class="setting-row range-row" for="resolutionSlider"><span><strong>Render resolution</strong><small>Lower to reduce GPU load</small></span><span class="range-control"><input id="resolutionSlider" type="range" min="0.6" max="1" step="0.1" value="1" /><output id="resolutionValue">100%</output></span></label>
+              <label class="setting-row switch-row" for="shadowToggle"><span><strong>Dynamic shadows</strong><small>More expensive on modest devices</small></span><input id="shadowToggle" type="checkbox" /></label>
+              <label class="setting-row" for="touchSelect"><span><strong>Touch controls</strong><small>Keyboard and mouse remain available</small></span><select id="touchSelect"><option value="auto">Automatic</option><option value="on">Always show</option><option value="off">Hide</option></select></label>
+              <label class="setting-row range-row" for="sensitivitySlider"><span><strong>Look sensitivity</strong><small>Mouse and touch camera</small></span><span class="range-control"><input id="sensitivitySlider" type="range" min="0.0006" max="0.006" step="0.0001" value="0.0024" /><output id="sensitivityValue">40%</output></span></label>
+              <label class="setting-row range-row" for="fovSlider"><span><strong>Field of view</strong><small>Camera lens angle</small></span><span class="range-control"><input id="fovSlider" type="range" min="45" max="85" step="1" value="58" /><output id="fovValue">58°</output></span></label>
+              <label class="setting-row switch-row" for="invertToggle"><span><strong>Invert vertical look</strong><small>Reverse up / down</small></span><input id="invertToggle" type="checkbox" /></label>
+            </div>
+            <div class="save-actions"><button id="saveButton" class="primary-button" type="button">Save life <span>F5</span></button><button id="loadButton" class="secondary-button" type="button">Load slot <span>F9</span></button></div>
+            <div class="save-actions"><button id="exportButton" class="secondary-button" type="button">Export save ↗</button><button id="importButton" class="secondary-button" type="button">Import save ↓</button><input id="importFile" type="file" accept=".json,application/json" hidden /></div>
+            <p class="inline-note">Transfer the exported JSON between PC and Android. Import asks before replacing a journey. No cloud sync.</p>
+            <button id="fullscreenButton" class="resume-button" type="button" hidden>Toggle fullscreen <span>⛶</span></button>
+            <button id="quitButton" class="resume-button" type="button" hidden>Save & exit app <span>↗</span></button>
+            <p id="performanceSummary" class="inline-note">Rendering pauses while a panel is open.</p>
           </div>
-          <div class="save-actions"><button id="saveButton" class="primary-button" type="button">Save life <span>F5</span></button><button id="loadButton" class="secondary-button" type="button">Load slot <span>F9</span></button></div>
+          <div id="inventoryPage" class="panel-page" hidden><div id="inventoryItems" class="item-grid"></div><p class="inline-note">Quest items stay in your bag until their delivery is complete.</p></div>
+          <div id="journalPage" class="panel-page" hidden><article class="journal-card"><span class="eyebrow" id="journalKicker">A SMALL FAVOR</span><h3 id="journalTitle">The Lantern Post</h3><p id="journalText"></p><p id="journalRoute"></p></article><article class="journal-card"><span class="eyebrow">AT YOUR OWN PACE</span><h3>A place to rest</h3><p>The open-front cabin west of the road has a bed. Resting restores energy and begins the next morning.</p></article></div>
           <button id="resumeButton" class="resume-button" type="button">Return to Morrow Bay <span>↗</span></button>
-          <div class="panel-footnote"><img src="/assets/beyond-destination-mark.svg" alt="" /><span>Progress is saved locally. No account or connection required.</span></div>
+          <div class="panel-footnote"><img src="/assets/beyond-destination-mark.svg" alt="" /><span>One world. Your own journey.<br />Local-first · no account required.</span></div>
         </section>
       </div>
 
+      <div id="confirmBackdrop" class="confirmation-backdrop" hidden>
+        <section id="confirmPanel" class="confirmation-panel" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText" tabindex="-1"><span class="eyebrow">YOUR JOURNEY</span><h2 id="confirmTitle">Are you sure?</h2><p id="confirmText"></p><div class="save-actions"><button id="confirmCancel" class="secondary-button" type="button">Keep playing</button><button id="confirmAccept" class="primary-button" type="button">Continue</button></div></section>
+      </div>
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
       <div id="loadingScreen" class="loading-screen"><img src="/assets/beyond-destination-mark.svg" alt="" /><span>ARRIVING AT MORROW BAY</span><i></i></div>
-      <div id="errorScreen" class="error-screen" hidden></div>
+      <div id="errorScreen" class="error-screen" role="alert" hidden></div>
     </main>
-
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -33,8 +33,16 @@ test('Morrow Bay generates a populated, bounded scene and a named NPC', () => {
   const { scene, world } = makeWorld();
   let meshCount = 0;
   scene.traverse((object) => { if (object.isMesh) meshCount += 1; });
-  assert.ok(scene.children.length > 80);
-  assert.ok(meshCount > 100);
+  assert.ok(scene.children.length > 30);
+  assert.ok(meshCount > 60);
+  const geometries = new Set();
+  let instanceCount = 0;
+  scene.traverse((object) => {
+    if (object.isMesh) geometries.add(object.geometry);
+    if (object.isInstancedMesh) instanceCount += object.count;
+  });
+  assert.ok(geometries.size < 50, 'Static geometry must be shared rather than cloned per prop');
+  assert.ok(instanceCount > 100, 'Repeated static structures and scenery should be batched');
   assert.ok(world.colliders.length > 25);
   assert.equal(world.npc.root.position.x, 2.55);
   assert.equal(world.npc.root.position.z, -1.35);
